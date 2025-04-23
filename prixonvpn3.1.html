@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRIXON VPN Interface</title>
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <!-- Chart.js for real-time speed graph -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Base and animated background styles */
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(45deg, #6a11cb, #2575fc, #6a11cb);
+      background-size: 600% 600%;
+      animation: gradient 16s ease infinite;
+      overflow: hidden;
+      color: #333;
+      transition: background 0.3s, color 0.3s;
+    }
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .container {
+      position: relative;
+      z-index: 2;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      padding: 40px;
+      margin: 20px auto;
+      max-width: 500px;
+      text-align: center;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .logo {
+      position: absolute;
+      top: -25px;
+      left: -25px;
+      width: 60px;
+      height: 60px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      font-size: 2.5em;
+    }
+    h1 {
+      margin-top: 40px;
+      font-size: 36px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    input,
+    select {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.8);
+      font-size: 16px;
+      transition: background 0.3s, color 0.3s;
+    }
+    input:focus,
+    select:focus {
+      outline: none;
+      box-shadow: 0 0 8px rgba(81, 203, 238, 1);
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      background-color: #28a745;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s, transform 0.3s;
+    }
+    button:hover {
+      background-color: #218838;
+      transform: scale(1.02);
+    }
+    .status {
+      margin-top: 10px;
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+    .status.connected {
+      color: #28a745;
+    }
+    .status.disconnected {
+      color: #dc3545;
+    }
+    .history,
+    .stats,
+    .logs,
+    .channel {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 8px;
+      text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 14px;
+    }
+    .toggle-container {
+      text-align: right;
+    }
+    /* Tooltip styles */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+      cursor: pointer;
+    }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 160px;
+      background-color: #555;
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 8px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -80px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+    /* Dark mode styles */
+    body.dark-mode {
+      background: #1a1a1a;
+      color: #f0f0f0;
+    }
+    .container.dark-mode {
+      background: rgba(50, 50, 50, 0.8);
+    }
+    input.dark-mode,
+    select.dark-mode {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+    button.dark-mode {
+      background-color: #007bff;
+    }
+    button.dark-mode:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <!-- Audio elements for connection and disconnection sounds -->
+  <audio id="connectSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
+  <audio id="disconnectSound" src="https://www.soundjay.com/buttons/sounds/button-09.mp3" preload="auto"></audio>
+
+  <div class="container">
+    <div class="logo" title="PRIXON VPN">🇬🇭</div>
+    <div class="toggle-container">
+      <label class="tooltip">
+        <input type="checkbox" id="toggleDarkMode" />
+        Dark Mode
+        <span class="tooltiptext">Toggle dark/light theme</span>
+      </label>
+    </div>
+    <h1>PRIXON VPN</h1>
+    <!-- Auto-suggested country based on location simulation -->
+    <div class="tooltip">
+      <select id="vpnService" title="Select a country for VPN server">
+        <option value="" disabled selected>Select a Country</option>
+        <option value="UNITED STATES">🇺🇸 United States</option>
+        <option value="UNITED KINGDOM">🇬🇧 United Kingdom</option>
+        <option value="CANADA">🇨🇦 Canada</option>
+        <option value="GERMANY">🇩🇪 Germany</option>
+        <option value="FRANCE">🇫🇷 France</option>
+        <option value="JAPAN">🇯🇵 Japan</option>
+        <option value="AUSTRALIA">🇦🇺 Australia</option>
+      </select>
+      <span class="tooltiptext">Auto-suggested based on your location</span>
+    </div>
+    <!-- Server address selection -->
+    <div class="tooltip">
+      <select id="server" title="Select a server address">
+        <option value="" disabled selected>Server Address</option>
+        <option value="104.26.15.41">104.26.15.41</option>
+        <option value="162.159.25.175">162.159.25.175</option>
+      </select>
+      <span class="tooltiptext">Select your preferred server address</span>
+    </div>
+    <!-- Additional fields -->
+    <input type="number" id="port" placeholder="Port" required title="Enter port number" />
+    <input type="password" id="password" placeholder="Password" required title="Enter password" />
+    <!-- Additional protocol options -->
+    <div class="tooltip">
+      <select id="protocol" title="Choose your VPN protocol">
+        <option value="socks5">SOCKS5</option>
+        <option value="socks4">SOCKS4</option>
+        <option value="openvpn">OpenVPN</option>
+        <option value="wireguard">WireGuard</option>
+        <option value="l2tp">L2TP/IPSec</option>
+      </select>
+      <span class="tooltiptext">Select VPN protocol</span>
+    </div>
+    <!-- Simple Captcha for security -->
+    <div class="tooltip">
+      <input type="text" id="captcha" placeholder="Solve: 3 + 4 =" required title="Simple math captcha" />
+      <span class="tooltiptext">Prove you're human</span>
+    </div>
+    <button id="connectBtn"><i class="fas fa-plug"></i> Connect</button>
+    <button id="disconnectBtn" style="display: none;"><i class="fas fa-unplug"></i> Disconnect</button>
+    <div class="status" id="status">Disconnected</div>
+    <div id="spinner" style="display: none;"></div>
+    <!-- Connection Logs -->
+    <div class="history" id="history">
+      <strong>Connection Logs:</strong>
+    </div>
+    <!-- Real-time Speed Graph & Stats -->
+    <div id="speedChartContainer" class="stats">
+      <canvas id="speedChart" width="400" height="200"></canvas>
+      <p>Upload: <span id="uploadSpeed">0 Mbps</span> | Download: <span id="downloadSpeed">0 Mbps</span></p>
+    </div>
+    <!-- Additional logs/info -->
+    <div class="logs" id="logs">
+      <p>Connection Type: LTE/4G</p>
+      <p>Authentication Status: <span id="authenticationStatus">Not Authenticated</span></p>
+    </div>
+    <div class="channel" id="channel">
+      <p>Join our Telegram channel: <a href="https://t.me/freesksfikesbyprixon" target="_blank">PRIXON Channel</a></p>
+    </div>
+    <!-- Add About Section -->
+    <button id="aboutBtn">About</button>
+    <div class="about" id="about" style="display: none; margin-top:20px; padding:15px; background: rgba(255,255,255,0.4); border-radius: 8px; text-align: left; font-size:14px;">
+      <p><strong>For free files like this, join my group for more:</strong></p>
+      <p><a href="https://t.me/freesksfikesbyprixon" target="_blank">Join PRIXON Free Files Group</a></p>
+      <p>🎇🎇🎇🎇🎇🎇🎇🎇🎇🎇🎇🎇🎇🎇🎇🎇</p>
+      <p>Learn 🇬🇭 how 🇬🇭 to 🇬🇭 create 🇬🇭 your 🇬🇭 own 🇬🇭 files 🇬🇭 for 🇬🇭 free at no cost 🇬🇭 any 🇬🇭 VPN at all, plus get free anime movie links and other apps and websites you may find useful 💯💯💯</p>
+    </div>
+  </div>
+
+  <script>
+    // Advanced Features Implementation
+
+    const historyList = [];
+    let connected = false;
+    let connectionCount = 0; // Track connections per day
+    const dailyLimit = 5; // Daily connection limit
+
+    // Setup Chart.js for the real-time speed graph
+    const ctx = document.getElementById('speedChart').getContext('2d');
+    let speedChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Upload Speed (Mbps)',
+            borderColor: '#28a745',
+            data: [],
+            fill: false
+          },
+          {
+            label: 'Download Speed (Mbps)',
+            borderColor: '#007bff',
+            data: [],
+            fill: false
+          }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        scales: {
+          x: { title: { display: true, text: 'Time' } },
+          y: { title: { display: true, text: 'Speed (Mbps)' }, min: 0 }
+        }
+      }
+    });
+
+    // Reset connection count at midnight
+    function resetConnectionCount() {
+      const now = new Date();
+      const midnight = new Date();
+      midnight.setHours(24, 0, 0, 0);
+      const timeUntilMidnight = midnight - now;
+      setTimeout(() => {
+        connectionCount = 0;
+        console.log('Daily connection count reset.');
+        resetConnectionCount();
+      }, timeUntilMidnight);
+    }
+    resetConnectionCount();
+
+    // Update connection logs
+    function updateHistory(entry) {
+      historyList.push(`[${new Date().toLocaleTimeString()}] ${entry}`);
+      document.getElementById('history').innerHTML =
+        '<strong>Connection Logs:</strong><br>' +
+        historyList.map(item => `<div>${item}</div>`).join('');
+    }
+
+    // Save connection details to localStorage
+    function saveConnectionDetails() {
+      const details = {
+        vpnService: document.getElementById('vpnService').value,
+        server: document.getElementById('server').value,
+        port: document.getElementById('port').value,
+        protocol: document.getElementById('protocol').value
+      };
+      localStorage.setItem('connectionDetails', JSON.stringify(details));
+    }
+
+    // Load connection details from localStorage
+    function loadConnectionDetails() {
+      const details = localStorage.getItem('connectionDetails');
+      if (details) {
+        const { vpnService, server, port, protocol } = JSON.parse(details);
+        document.getElementById('vpnService').value = vpnService;
+        document.getElementById('server').value = server;
+        document.getElementById('port').value = port;
+        document.getElementById('protocol').value = protocol;
+      }
+    }
+    loadConnectionDetails();
+
+    // Simulate updating speeds and update the graph
+    function updateSpeedChart() {
+      const now = new Date().toLocaleTimeString();
+      const upload = (Math.random() * 10).toFixed(2);
+      const download = (Math.random() * 100).toFixed(2);
+      document.getElementById('uploadSpeed').innerText = upload + ' Mbps';
+      document.getElementById('downloadSpeed').innerText = download + ' Mbps';
+
+      speedChart.data.labels.push(now);
+      speedChart.data.datasets[0].data.push(upload);
+      speedChart.data.datasets[1].data.push(download);
+      if (speedChart.data.labels.length > 10) {
+        speedChart.data.labels.shift();
+        speedChart.data.datasets[0].data.shift();
+        speedChart.data.datasets[1].data.shift();
+      }
+      speedChart.update();
+    }
+
+    let speedInterval; // To hold interval ID
+
+    // Connect button event
+    document.getElementById('connectBtn').addEventListener('click', function () {
+      if (connectionCount >= dailyLimit) {
+        document.getElementById('status').innerText = 'Daily connection limit reached.';
+        return;
+      }
+      // Simple captcha validation
+      if (document.getElementById('captcha').value.trim() !== '7') {
+        document.getElementById('status').innerText = 'Captcha incorrect. Please try again.';
+        return;
+      }
+      const server = document.getElementById('server').value;
+      const port = document.getElementById('port').value;
+      const password = document.getElementById('password').value;
+      const vpnService = document.getElementById('vpnService').value;
+      if (server && port && password && vpnService) {
+        saveConnectionDetails();
+        document.getElementById('status').innerText = `Connecting to ${vpnService}...`;
+        document.getElementById('spinner').style.display = 'block';
+        // Simulate connection steps
+        setTimeout(() => {
+          document.getElementById('status').innerText = 'Authenticating...';
+          setTimeout(() => {
+            document.getElementById('status').innerText = 'Password authenticated.';
+            document.getElementById('authenticationStatus').innerText = 'Authenticated';
+            setTimeout(() => {
+              document.getElementById('status').innerText = 'CONNECTED';
+              document.getElementById('status').classList.add('connected');
+              document.getElementById('connectBtn').style.display = 'none';
+              document.getElementById('disconnectBtn').style.display = 'block';
+              updateHistory(`Connected to ${vpnService} at server ${server}`);
+              document.getElementById('spinner').style.display = 'none';
+              connectionCount++;
+              connected = true;
+              // Play connection sound and desktop notification
+              document.getElementById('connectSound').play();
+              if (Notification.permission === 'granted') {
+                new Notification('VPN Connected', { body: `Connected to ${vpnService}` });
+              }
+              updateSpeedChart();
+              speedInterval = setInterval(updateSpeedChart, 3000);
+            }, 1500);
+          }, 1500);
+        }, 1500);
+      } else {
+        document.getElementById('status').innerText = 'Please fill in all fields correctly.';
+      }
+    });
+
+    // Disconnect button event
+    document.getElementById('disconnectBtn').addEventListener('click', function () {
+      document.getElementById('status').innerText = 'Disconnecting...';
+      document.getElementById('spinner').style.display = 'block';
+      setTimeout(() => {
+        document.getElementById('status').innerText = 'Disconnected';
+        document.getElementById('status').classList.remove('connected');
+        document.getElementById('connectBtn').style.display = 'block';
+        document.getElementById('disconnectBtn').style.display = 'none';
+        document.getElementById('authenticationStatus').innerText = 'Not Authenticated';
+        document.getElementById('spinner').style.display = 'none';
+        connected = false;
+        clearInterval(speedInterval);
+        // Play disconnect sound and notification
+        document.getElementById('disconnectSound').play();
+        if (Notification.permission === 'granted') {
+          new Notification('VPN Disconnected', { body: 'You have been disconnected.' });
+        }
+      }, 1500);
+    });
+
+    // Toggle dark mode
+    document.getElementById('toggleDarkMode').addEventListener('change', function () {
+      document.body.classList.toggle('dark-mode');
+      document.querySelector('.container').classList.toggle('dark-mode');
+      document.querySelectorAll('input, select, button').forEach(elem => {
+        elem.classList.toggle('dark-mode');
+      });
+    });
+
+    // Request desktop notification permission on page load
+    if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+
+    // About button event
+    document.getElementById('aboutBtn').addEventListener('click', function() {
+      // Toggle display of the about section
+      const aboutSection = document.getElementById('about');
+      if (aboutSection.style.display === 'none' || aboutSection.style.display === '') {
+        aboutSection.style.display = 'block';
+      } else {
+        aboutSection.style.display = 'none';
+      }
+    });
+  </script>
+  
+  <!-- Additional style block to enable vertical scrolling without altering the original code -->
+  <style>
+    body {
+      overflow-y: auto !important;
+    }
+  </style>
+  
+  <!-- New Script Block: Simulate realistic upload/download speeds when VPN is connected -->
+  <script>
+    // This feature simulates active upload and download speeds similar to npv tunnel VPN.
+    // It monitors the status element and, when connected, starts a new interval to update speeds.
+    let simulationInterval;
+    let simulationActive = false;
+
+    function startSpeedSimulation() {
+      if (!simulationActive) {
+        simulationActive = true;
+        simulationInterval = setInterval(() => {
+          // Simulate speeds with more realistic ranges:
+          // Upload between 5 and 10 Mbps, Download between 50 and 100 Mbps.
+          const uploadSpeed = (5 + Math.random() * 5).toFixed(2);
+          const downloadSpeed = (50 + Math.random() * 50).toFixed(2);
+          document.getElementById('uploadSpeed').innerText = uploadSpeed + ' Mbps';
+          document.getElementById('downloadSpeed').innerText = downloadSpeed + ' Mbps';
+        }, 1000);
+      }
+    }
+
+    function stopSpeedSimulation() {
+      if (simulationActive) {
+        clearInterval(simulationInterval);
+        simulationActive = false;
+        // Reset speeds to 0
+        document.getElementById('uploadSpeed').innerText = '0 Mbps';
+        document.getElementById('downloadSpeed').innerText = '0 Mbps';
+      }
+    }
+
+    // Monitor changes to the connection status using a MutationObserver.
+    const statusObserver = new MutationObserver((mutationsList) => {
+      for (const mutation of mutationsList) {
+        if (mutation.type === 'childList') {
+          const currentStatus = document.getElementById('status').innerText;
+          if (currentStatus === 'CONNECTED') {
+            startSpeedSimulation();
+          } else if (currentStatus === 'Disconnected' || currentStatus === 'Disconnecting...') {
+            stopSpeedSimulation();
+          }
+        }
+      }
+    });
+
+    // Observe the status element for changes.
+    const statusElement = document.getElementById('status');
+    statusObserver.observe(statusElement, { childList: true });
+  </script>
+  
+</body>
+</html>
